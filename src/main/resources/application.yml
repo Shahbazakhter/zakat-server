@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/zakat_repo
+    username: root
+    password: root
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
