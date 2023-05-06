@@ -2,24 +2,18 @@ package com.org.conceptlearning.service.impl;
 
 import com.org.conceptlearning.entity.Customer;
 import com.org.conceptlearning.entity.Transaction;
-import com.org.conceptlearning.model.Amount;
-import com.org.conceptlearning.model.CustomerResponse;
-import com.org.conceptlearning.model.TransactionRequest;
-import com.org.conceptlearning.model.TransactionResponse;
+import com.org.conceptlearning.model.*;
 import com.org.conceptlearning.repo.CustomerRepository;
 import com.org.conceptlearning.repo.TransactionRepository;
 import com.org.conceptlearning.service.ZakatService;
 import com.org.conceptlearning.utility.ZakatUtility;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.repository.init.ResourceReader;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,25 +38,38 @@ public class ZakatServiceImpl implements ZakatService {
     }
 
     @Override
-    public boolean saveTransaction(String fileName) {
+    public TransactionResult saveTransaction(String fileName) {
+        TransactionResult.TransactionResultBuilder transactionBuilder = TransactionResult.builder();
         try {
-            String path = ResourceReader.class.getClassLoader().getResource("input/" + fileName).getPath();
-            List<Transaction> transactionDetails = zakatUtility.readTransactionsFromExcel(path);
-            Customer customerDetail = zakatUtility.readCustomerFromExcel(path);
+            List<Transaction> transactionDetails = zakatUtility.readTransactionsFromExcel(fileName);
+            Customer customerDetail = zakatUtility.readCustomerFromExcel(fileName);
+            List<Transaction> duplicateTransactions = transactionRepository.findByTransactionDateAndRemarksIn(transactionDetails.stream().map(Transaction::getSerialNumber).collect(Collectors.toList()),
+                    transactionDetails.stream().map(Transaction::getTransactionDate).collect(Collectors.toList()),
+                    transactionDetails.stream().map(Transaction::getTransactionRemarks).collect(Collectors.toList()));
+            if (!duplicateTransactions.isEmpty()) {
+                transactionBuilder.errorCode("DUPLICATE_ENTRIES").errorMessage(duplicateTransactions.stream()
+                        .map(transaction -> "TransactionDate:" + transaction.getTransactionDate() + ",Remarks:" + transaction.getTransactionRemarks()).collect(Collectors.toList()));
+            }
+            if(duplicateTransactions.size()!=transactionDetails.size()){
+                transactionBuilder.successMessage("File Uploaded Successfully");
+            }
+            Map<String, LocalDate> duplicateEntries = duplicateTransactions.stream().collect(Collectors.toMap(Transaction::getTransactionRemarks, Transaction::getTransactionDate));
+            List<Transaction> updatedTransactionDetails = transactionDetails.stream().filter(transaction -> !duplicateEntries.containsKey(transaction.getTransactionRemarks())).collect(Collectors.toList());
+
             Customer existingCustomer = customerRepository.findByAccountNumber(customerDetail.getAccountNumber());
             if (Objects.isNull(existingCustomer)) {
                 customerRepository.save(customerDetail);
             } else {
                 customerDetail.setCustomerId(existingCustomer.getCustomerId());
             }
-            transactionDetails.forEach(transactionDetail -> transactionDetail.setCustomerDetail(customerDetail));
-            log.info("TransactionDetails:{}", transactionDetails);
-            transactionRepository.saveAll(transactionDetails);
+            updatedTransactionDetails.forEach(transactionDetail -> transactionDetail.setCustomerDetail(customerDetail));
+            log.info("TransactionDetails:{}", updatedTransactionDetails);
+            transactionRepository.saveAll(updatedTransactionDetails);
         } catch (Exception e) {
             log.error("Exception Occurred: ", e);
-            return false;
+            throw new RuntimeException(e);
         }
-        return true;
+        return transactionBuilder.build();
     }
 
     @Override
@@ -138,6 +145,7 @@ public class ZakatServiceImpl implements ZakatService {
                 .transactionDate(transaction.getTransactionDate())
                 .valueDate(transaction.getValueDate())
                 .customerDetail(mapCustomerResponse(transaction))
+                .serialNumber(transaction.getSerialNumber())
                 .build();
     }
 

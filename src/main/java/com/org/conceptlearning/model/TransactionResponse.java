@@ -17,6 +17,8 @@ public class TransactionResponse {
 
     private Long transactionDetailId;
 
+    private Long serialNumber;
+
     private LocalDate valueDate;
 
     private LocalDate transactionDate;

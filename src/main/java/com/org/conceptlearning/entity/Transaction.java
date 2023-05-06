@@ -15,13 +15,16 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "transaction")
+@Table(name = "transaction", uniqueConstraints = @UniqueConstraint(columnNames = {"serial_number", "transaction_date", "remarks"}))
 public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "transaction_Id")
     private Long transactionDetailId;
+
+    @Column(name = "serial_number")
+    private Long serialNumber;
 
     @Column(name = "value_date")
     private LocalDate valueDate;

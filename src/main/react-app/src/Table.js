@@ -1,18 +1,16 @@
 import BootstrapTable from 'react-bootstrap-table-next';
 import paginationFactory from 'react-bootstrap-table2-paginator';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 
-
-function Table() {
-
+const Table = React.forwardRef((props, ref) => {
     const [data, setData] = useState([]);
     const [totalRecords, setTotalRecords] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     useEffect(() => {
-        filterTransactions(); // Fetch the data when the component mounts
+        filterTransactions();
     }, []);
 
     const filterTransactions = async () => {
@@ -31,31 +29,43 @@ function Table() {
                 transactionRemarks, depositAmount, withdrawalAmount, balance
             }));
             setData(filteredData); // Store the fetched data
-            console.log("size:"+filteredData.length)
             setTotalRecords(filteredData.length)
         } catch (error) {
             console.error(error);
         }
     };
     const columns = [
-        { dataField: 'transactionDetailId', text: 'S.No' , sort: true},
-        { dataField: 'transactionDate', text: 'Transaction Date' , sort: true},
-        { dataField: 'transactionRemarks', text: 'Remarks' , sort: true ,
-        sortCaret: (order, column) => {
-            if (!order) return <FontAwesomeIcon icon={faSort} />;
-            if (order === 'asc') return <FontAwesomeIcon icon={faSortUp} />;
-            if (order === 'desc') return <FontAwesomeIcon icon={faSortDown} />;
-            return null;
-          },
-    },
-        { dataField: 'depositAmount', text: 'Deposit Amount' , sort: true},
-        { dataField: 'withdrawalAmount', text: 'Withdrawal Amount' , sort: true},
-        { dataField: 'balance', text: 'Balance' , sort: true},
+        { dataField: 'transactionDetailId', text: 'S.No', sort: true },
+        {
+            dataField: 'transactionDate', text: 'Transaction Date', sort: true,
+            sortCaret: (order, column) => {
+                if (!order) return <FontAwesomeIcon icon={faSort} />;
+                if (order === 'asc') return <FontAwesomeIcon icon={faSortUp} />;
+                if (order === 'desc') return <FontAwesomeIcon icon={faSortDown} />;
+                return null;
+            }
+        },
+        { dataField: 'transactionRemarks', text: 'Remarks' },
+        { dataField: 'depositAmount', text: 'Deposit Amount', sort: true },
+        { dataField: 'withdrawalAmount', text: 'Withdrawal Amount', sort: true },
+        {
+            dataField: 'balance', text: 'Balance', sort: true,
+            sortCaret: (order, column) => {
+                if (!order) return <FontAwesomeIcon icon={faSort} />;
+                if (order === 'asc') return <FontAwesomeIcon icon={faSortUp} />;
+                if (order === 'desc') return <FontAwesomeIcon icon={faSortDown} />;
+                return null;
+            }
+        },
     ];
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
+
+    useImperativeHandle(ref, () => ({
+        filterTransactions,
+    }));
 
     const paginationOptions = {
         sizePerPage: 15, totalSize: totalRecords,
@@ -67,13 +77,13 @@ function Table() {
     return (
         <div>
             <BootstrapTable
-                keyField="id"
+                keyField="transactionDetailId"
                 data={data}
-                columns={columns} placeholder={"aasassasasasasasas"}
+                columns={columns}
                 pagination={paginationFactory(paginationOptions)} sortByColumn={false}
             /><p>Total Records: {totalRecords}</p>
         </div>
     );
-}
+});
 
 export default Table;

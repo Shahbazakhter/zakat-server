@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Component
@@ -35,6 +34,7 @@ public class ZakatUtility {
                     continue;
                 }
                 log.info(String.valueOf(row.getCell(1)));
+                Long sNo = Long.valueOf(String.valueOf(row.getCell(1)).trim());
                 LocalDate valueDate = COMMA_SEPERATED_DATE_FORMAT.parse(String.valueOf(row.getCell(2))).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
                 LocalDate transactionDate = COMMA_SEPERATED_DATE_FORMAT.parse(String.valueOf(row.getCell(3))).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
                 String chequeNumber = String.valueOf(row.getCell(4));
@@ -42,8 +42,16 @@ public class ZakatUtility {
                 BigDecimal withdrawalAmount = BigDecimal.valueOf(Double.parseDouble(String.valueOf(row.getCell(6))));
                 BigDecimal depositAmount = BigDecimal.valueOf(Double.parseDouble(String.valueOf(row.getCell(7))));
                 BigDecimal balance = BigDecimal.valueOf(Double.parseDouble(String.valueOf(row.getCell(8))));
-                Transaction transactionDetail = Transaction.builder().valueDate(valueDate).transactionDate(transactionDate).chequeNumber(chequeNumber)
-                        .transactionRemarks(remarks).withdrawalAmount(withdrawalAmount).depositAmount(depositAmount).balance(balance).build();
+                Transaction transactionDetail = Transaction.builder()
+                        .serialNumber(sNo)
+                        .valueDate(valueDate)
+                        .transactionDate(transactionDate)
+                        .chequeNumber(chequeNumber)
+                        .transactionRemarks(remarks)
+                        .withdrawalAmount(withdrawalAmount)
+                        .depositAmount(depositAmount)
+                        .balance(balance)
+                        .build();
                 transactionDetails.add(transactionDetail);
             }
         }

@@ -3,12 +3,12 @@ package com.org.conceptlearning.controller;
 import com.org.conceptlearning.model.Amount;
 import com.org.conceptlearning.model.TransactionRequest;
 import com.org.conceptlearning.model.TransactionResponse;
+import com.org.conceptlearning.model.TransactionResult;
 import com.org.conceptlearning.service.ZakatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,30 +30,19 @@ public class ZakatController {
         this.zakatService = zakatService;
     }
 
-    public ResponseEntity<List<TransactionResponse>>
     @PostMapping(value = "/statement/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> handleFileUpload(@RequestParam("file") MultipartFile file) {
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+    public ResponseEntity<TransactionResult> handleFileUpload(@RequestParam("file") MultipartFile file) {
+        TransactionResult.TransactionResultBuilder transactionBuilder = TransactionResult.builder();
         try {
             String tempDirPath = System.getProperty("java.io.tmpdir");
             File tempFile = File.createTempFile("upload-", ".tmp", new File(tempDirPath));
             file.transferTo(tempFile);
             log.info("tempDirPath:{}", tempDirPath);
-            // Process the file as required
-            // Delete the temporary file
-//            tempFile.delete();
+            TransactionResult transactionResult = zakatService.saveTransaction(tempFile.getAbsolutePath());
+            tempFile.delete();
+            return ResponseEntity.ok().body(transactionResult);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file");
-        }
-        return ResponseEntity.ok().body("File uploaded successfully");
-    }
-
-    @PostMapping(TRANSACTION)
-    public ResponseEntity<String> saveTransactionDetails(@RequestBody TransactionRequest transactionRequest) {
-        try {
-            return ResponseEntity.ok().body(String.valueOf(zakatService.saveTransaction(transactionRequest.getFileName())));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("FAILED, e:" + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(transactionBuilder.errorCode("SERVER_ERROR").errorMessage(List.of(e.getMessage())).build());
         }
     }
 
