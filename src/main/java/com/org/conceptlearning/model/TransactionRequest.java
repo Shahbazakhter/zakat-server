@@ -17,7 +17,7 @@ public class TransactionRequest {
     private LocalDate fromDate;
     private LocalDate toDate;
     private String remarksData;
-    private String sortByColumn;
-    private String sortOrder;
+    private boolean isZakat;
+    private boolean isInterest;
 
 }

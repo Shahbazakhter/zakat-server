@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import static com.org.conceptlearning.constants.ZakatContants.*;
@@ -33,22 +32,27 @@ public class ZakatController {
     @PostMapping(value = "/statement/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TransactionResult> handleFileUpload(@RequestParam("file") MultipartFile file) {
         TransactionResult.TransactionResultBuilder transactionBuilder = TransactionResult.builder();
+        File tempFile = null;
         try {
             String tempDirPath = System.getProperty("java.io.tmpdir");
-            File tempFile = File.createTempFile("upload-", ".tmp", new File(tempDirPath));
+            tempFile = File.createTempFile("upload-", ".tmp", new File(tempDirPath));
             file.transferTo(tempFile);
             log.info("tempDirPath:{}", tempDirPath);
             TransactionResult transactionResult = zakatService.saveTransaction(tempFile.getAbsolutePath());
-            tempFile.delete();
             return ResponseEntity.ok().body(transactionResult);
-        } catch (IOException e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(transactionBuilder.errorCode("SERVER_ERROR").errorMessage(List.of(e.getMessage())).build());
+        } finally {
+            tempFile.delete();
         }
     }
 
     @PostMapping(TRANSACTIONS_FILTER)
     public ResponseEntity<List<TransactionResponse>> getTransactionDetails(@RequestBody TransactionRequest transactionRequest) {
         try {
+            if (transactionRequest.isInterest()) {
+                transactionRequest.setRemarksData(":Int.Pd:");
+            }
             return ResponseEntity.ok().body(zakatService.fetchAllTransactions(transactionRequest));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(null);
@@ -70,6 +74,7 @@ public class ZakatController {
     public ResponseEntity<Amount> calculateInterest(@RequestBody TransactionRequest transactionRequest) {
         try {
             transactionRequest.setRemarksData(":Int.Pd:");
+            transactionRequest.setInterest(true);
             return ResponseEntity.ok().body(zakatService.calculateInterest(transactionRequest));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(null);
